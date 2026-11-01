@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../models/document.dart';
 import '../services/search_service.dart';
 import '../services/download_helper.dart';
+import '../widgets/github_dialog.dart';
 import 'pdf_viewer_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -210,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Center(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -240,6 +241,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          IconButton(
+            tooltip: 'مستودع المشروع على GitHub',
+            icon: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.25)),
+              ),
+              child: const GitHubIcon(size: 18, color: Colors.white),
+            ),
+            onPressed: () => showGitHubReposDialog(context),
+          ),
+          const SizedBox(width: 6),
         ],
       ),
       body: Column(
@@ -593,6 +608,73 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     },
                   ),
+          ),
+
+          // 3. Footer Bar: App Info & "مصنوع بواسطة mokhtar eby" + GitHub
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(color: Colors.grey.shade200),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  offset: const Offset(0, -2),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.balance, size: 14, color: Color(0xFF059669)),
+                    SizedBox(width: 6),
+                    Text(
+                      'الحقيبة القضائية الموريتانية',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF475569),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                InkWell(
+                  onTap: () => showGitHubReposDialog(context),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669).withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFF059669).withOpacity(0.2)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.code, size: 13, color: Color(0xFF059669)),
+                        SizedBox(width: 4),
+                        Text(
+                          'مصنوع بواسطة mokhtar eby',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF065F46),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        GitHubIcon(size: 13, color: Color(0xFF065F46)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -1,4 +1,4 @@
-package com.example.mallette
+package com.mkxz.mallette
 
 import io.flutter.embedding.android.FlutterActivity
 

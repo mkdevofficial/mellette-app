@@ -14,6 +14,7 @@ analyzer:
     - build/**
     - android/**
     - web/**
+    - assets/**
   errors:
     deprecated_member_use: ignore
 

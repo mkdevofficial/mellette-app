@@ -43,6 +43,7 @@ dependencies:
   google_fonts: ^9.0.0
   archive: ^4.6.0
   web: ^1.1.2
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +68,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/icon/
     - assets/data/
     - assets/pdfs/
 
