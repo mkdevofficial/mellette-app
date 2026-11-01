@@ -21,16 +21,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Put signing keys in project root
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/upload-keystore.jks"
-          cat > "$GITHUB_WORKSPACE/key.properties" <<EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=$GITHUB_WORKSPACE/upload-keystore.jks
-          EOF
-
       - run: flutter pub get
 
       - run: flutter build apk --release --split-per-abi
