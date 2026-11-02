@@ -27,12 +27,14 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey<SfPdfViewerState>();
   late PdfViewerController _pdfViewerController;
   late TextEditingController _searchController;
+  final FocusNode _searchFocusNode = FocusNode();
   PdfTextSearchResult? _searchResult;
 
   int _currentPage = 1;
   int _totalPages = 1;
   bool _isLoading = true;
   bool _showMenu = false;
+  bool _isFloatingSearchOpen = false;
 
   // Custom text selection state
   String? _selectedText;
@@ -52,9 +54,122 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     _searchResult?.removeListener(_onSearchResultUpdate);
     _searchResult?.clear();
     _searchResult?.dispose();
+    _searchFocusNode.dispose();
     _searchController.dispose();
     _pdfViewerController.dispose();
     super.dispose();
+  }
+
+  void _toggleFloatingSearch() {
+    setState(() {
+      _isFloatingSearchOpen = !_isFloatingSearchOpen;
+      if (_isFloatingSearchOpen) {
+        _showMenu = false;
+        _searchFocusNode.requestFocus();
+      } else {
+        _searchFocusNode.unfocus();
+      }
+    });
+  }
+
+  void _onDocumentTap(PdfGestureDetails details) {
+    if (_showMenu) {
+      setState(() {
+        _showMenu = false;
+      });
+    }
+    if (_searchFocusNode.hasFocus) {
+      _searchFocusNode.unfocus();
+    }
+    if (_selectedAnnotation != null) {
+      _pdfViewerController.deselectAnnotation(_selectedAnnotation!);
+      setState(() {
+        _selectedAnnotation = null;
+      });
+    }
+  }
+
+  void _showJumpToPageDialog() {
+    final pageTextController = TextEditingController(text: '$_currentPage');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0F172A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withOpacity(0.15)),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_stories, color: Color(0xFFF59E0B), size: 20),
+            SizedBox(width: 8),
+            Text(
+              'الانتقال السريع إلى صفحة',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'أدخل رقم الصفحة بين 1 و $_totalPages:',
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: pageTextController,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFF1E293B),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+                ),
+              ),
+              onSubmitted: (val) {
+                final page = int.tryParse(val);
+                if (page != null && page >= 1 && page <= _totalPages) {
+                  Navigator.of(ctx).pop();
+                  _pdfViewerController.jumpToPage(page);
+                }
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('إلغاء', style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              foregroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              final page = int.tryParse(pageTextController.text);
+              if (page != null && page >= 1 && page <= _totalPages) {
+                Navigator.of(ctx).pop();
+                _pdfViewerController.jumpToPage(page);
+              }
+            },
+            child: const Text('انتقال', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _onDocumentLoaded(PdfDocumentLoadedDetails details) {
@@ -395,11 +510,17 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                       controller: _pdfViewerController,
                       canShowScrollHead: false,
                       canShowScrollStatus: false,
+                      canShowPaginationDialog: false,
                       enableDoubleTapZooming: true,
+                      pageSpacing: 4.0,
+                      maxZoomLevel: 5.0,
+                      currentSearchTextHighlightColor: const Color(0xB3DC2626), // أحمر شفاف مميز للمطابقة الحالية
+                      otherSearchTextHighlightColor: const Color(0x40EF4444),   // أحمر شفاف خفيف لكافة المطابقات الأخرى
                       canShowTextSelectionMenu: false, // We use our superior custom toolbar
                       pageLayoutMode: PdfPageLayoutMode.continuous,
                       onDocumentLoaded: _onDocumentLoaded,
                       onPageChanged: _onPageChanged,
+                      onTap: _onDocumentTap,
                       onTextSelectionChanged: _onTextSelectionChanged,
                       onAnnotationSelected: _onAnnotationSelected,
                       onAnnotationDeselected: _onAnnotationDeselected,
@@ -512,135 +633,230 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 ),
               ),
 
-            // 3. Floating Page Indicator (Top Center)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 10,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.65),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.2)),
-                  ),
-                  child: Text(
-                    '$_currentPage / $_totalPages',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // 4. Compact Floating Search Navigation Bar (When search is active and menu is closed)
-            if (hasActiveSearch && !_showMenu)
+            // 3. Floating Expanded Search Bar (When floating search is open)
+            if (_isFloatingSearchOpen)
               Positioned(
-                top: MediaQuery.of(context).padding.top + 46,
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 14,
+                right: 14,
+                child: _buildFloatingSearchBar(context, hasActiveSearch),
+              ),
+
+            // 4. Floating Header Controls (When expanded search bar is closed)
+            if (!_isFloatingSearchOpen) ...[
+              // Floating Page Indicator (Top Center - Tap to jump to page)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 10,
                 left: 0,
                 right: 0,
                 child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A).withOpacity(0.92),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _showJumpToPageDialog,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.5)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white.withOpacity(0.2)),
                         ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.search, size: 14, color: Color(0xFFF59E0B)),
-                        const SizedBox(width: 6),
-                        Text(
-                          _searchResult!.isSearchCompleted
-                              ? '${_searchResult!.currentInstanceIndex} من ${_searchResult!.totalInstanceCount}'
-                              : 'جاري البحث...',
-                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.touch_app, size: 12, color: Colors.white54),
+                            const SizedBox(width: 5),
+                            Text(
+                              '$_currentPage / $_totalPages',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () => _searchResult?.previousInstance(),
-                          borderRadius: BorderRadius.circular(10),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            child: Icon(Icons.keyboard_arrow_up, size: 18, color: Colors.white),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () => _searchResult?.nextInstance(),
-                          borderRadius: BorderRadius.circular(10),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            child: Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.white),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        InkWell(
-                          onTap: _clearInBookSearch,
-                          borderRadius: BorderRadius.circular(10),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            child: Icon(Icons.close, size: 14, color: Colors.white70),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
 
-            // 5. Floating "..." Menu Button (Top Left)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 8,
-              left: 14,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    setState(() {
-                      _showMenu = !_showMenu;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(25),
-                  child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A).withOpacity(0.85),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: hasActiveSearch ? const Color(0xFFF59E0B) : Colors.white.withOpacity(0.2),
+              // Compact Floating Search Navigation Pill (When search is active and menu is closed)
+              if (hasActiveSearch && !_showMenu)
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 46,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withOpacity(0.94),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.6)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.4),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.search, size: 14, color: Color(0xFFEF4444)),
+                          const SizedBox(width: 6),
+                          Text(
+                            _searchResult!.isSearchCompleted
+                                ? '${_searchResult!.currentInstanceIndex} من ${_searchResult!.totalInstanceCount}'
+                                : 'جاري البحث...',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: () => _searchResult?.previousInstance(),
+                            borderRadius: BorderRadius.circular(10),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              child: Icon(Icons.keyboard_arrow_up, size: 18, color: Colors.white),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () => _searchResult?.nextInstance(),
+                            borderRadius: BorderRadius.circular(10),
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              child: Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Tooltip(
+                            message: 'تعديل البحث',
+                            child: InkWell(
+                              onTap: _toggleFloatingSearch,
+                              borderRadius: BorderRadius.circular(10),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                child: Icon(Icons.edit, size: 13, color: Colors.white70),
+                              ),
+                            ),
+                          ),
+                          Tooltip(
+                            message: 'إلغاء البحث',
+                            child: InkWell(
+                              onTap: _clearInBookSearch,
+                              borderRadius: BorderRadius.circular(10),
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                child: Icon(Icons.close, size: 14, color: Colors.white70),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: Icon(
-                      Icons.more_horiz,
-                      color: hasActiveSearch ? const Color(0xFFF59E0B) : Colors.white,
-                      size: 24,
+                  ),
+                ),
+
+              // Floating "..." Menu Button (Top Left)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 14,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _showMenu = !_showMenu;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(25),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withOpacity(0.85),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.more_horiz,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+
+              // Floating Search Button (Top Right - زر البحث العائم)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 8,
+                right: 14,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _toggleFloatingSearch,
+                    borderRadius: BorderRadius.circular(25),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withOpacity(0.85),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: hasActiveSearch ? const Color(0xFFEF4444) : Colors.white.withOpacity(0.2),
+                          width: hasActiveSearch ? 1.5 : 1.0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: hasActiveSearch ? const Color(0xFFEF4444).withOpacity(0.35) : Colors.black.withOpacity(0.4),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(
+                            Icons.search,
+                            color: hasActiveSearch ? const Color(0xFFEF4444) : Colors.white,
+                            size: 22,
+                          ),
+                          if (hasActiveSearch && _searchResult != null && _searchResult!.totalInstanceCount > 0)
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFEF4444),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
             // 6. === Custom Enhanced Text Selection Toolbar (شريط تحديد ونسخ وتمييز النصوص) ===
             if (hasTextSelection)
@@ -886,7 +1102,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                           color: const Color(0xFF1E293B),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: hasActiveSearch ? const Color(0xFFF59E0B) : Colors.white.withOpacity(0.15),
+                            color: hasActiveSearch ? const Color(0xFFEF4444) : Colors.white.withOpacity(0.15),
                           ),
                         ),
                         child: TextField(
@@ -897,7 +1113,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                           decoration: InputDecoration(
                             hintText: 'ابحث عن فقرة أو عنوان أو نص...',
                             hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
-                            prefixIcon: const Icon(Icons.search, color: Color(0xFFF59E0B), size: 18),
+                            prefixIcon: const Icon(Icons.search, color: Color(0xFFEF4444), size: 18),
                             suffixIcon: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -909,7 +1125,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                                     onPressed: _clearInBookSearch,
                                   ),
                                 IconButton(
-                                  icon: const Icon(Icons.arrow_forward_ios, color: Color(0xFF34D399), size: 13),
+                                  icon: const Icon(Icons.arrow_forward_ios, color: Color(0xFFEF4444), size: 13),
                                   padding: const EdgeInsets.symmetric(horizontal: 8),
                                   constraints: const BoxConstraints(),
                                   onPressed: () => _performInBookSearch(_searchController.text),
@@ -929,13 +1145,13 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF065F46).withOpacity(0.35),
+                            color: const Color(0xFFEF4444).withOpacity(0.15),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+                            border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.find_in_page, color: Color(0xFFF59E0B), size: 15),
+                              const Icon(Icons.find_in_page, color: Color(0xFFEF4444), size: 15),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
@@ -943,7 +1159,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                                       ? 'المطابقة ${_searchResult!.currentInstanceIndex} من ${_searchResult!.totalInstanceCount}'
                                       : 'جاري البحث في الصفحات...',
                                   style: const TextStyle(
-                                    color: Color(0xFF6EE7B7),
+                                    color: Color(0xFFFCA5A5),
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -1181,6 +1397,123 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       height: 18,
       margin: const EdgeInsets.symmetric(horizontal: 2),
       color: Colors.white.withOpacity(0.15),
+    );
+  }
+
+  Widget _buildFloatingSearchBar(BuildContext context, bool hasActiveSearch) {
+    return Material(
+      elevation: 12,
+      borderRadius: BorderRadius.circular(16),
+      color: const Color(0xFF0F172A).withOpacity(0.97),
+      child: Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: hasActiveSearch ? const Color(0xFFEF4444) : Colors.white.withOpacity(0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: hasActiveSearch ? const Color(0xFFEF4444).withOpacity(0.25) : Colors.black.withOpacity(0.55),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6),
+              child: Icon(Icons.search, color: Color(0xFFEF4444), size: 22),
+            ),
+            Expanded(
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                textInputAction: TextInputAction.search,
+                cursorColor: const Color(0xFFEF4444),
+                onSubmitted: (val) => _performInBookSearch(val),
+                decoration: InputDecoration(
+                  hintText: 'ابحث عن نص، فقرة أو عنوان بالوثيقة...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+            if (_searchController.text.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.clear, color: Colors.white54, size: 17),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'مسح',
+                onPressed: _clearInBookSearch,
+              ),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward_ios, color: Color(0xFFEF4444), size: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              constraints: const BoxConstraints(),
+              tooltip: 'بحث',
+              onPressed: () => _performInBookSearch(_searchController.text),
+            ),
+            if (hasActiveSearch && _searchResult != null) ...[
+              Container(
+                height: 24,
+                width: 1,
+                color: Colors.white.withOpacity(0.2),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _searchResult!.isSearchCompleted
+                      ? '${_searchResult!.currentInstanceIndex} / ${_searchResult!.totalInstanceCount}'
+                      : '...',
+                  style: const TextStyle(
+                    color: Color(0xFFFCA5A5),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.keyboard_arrow_up, color: Colors.white, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'السابق',
+                onPressed: () => _searchResult?.previousInstance(),
+              ),
+              IconButton(
+                icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                tooltip: 'التالي',
+                onPressed: () => _searchResult?.nextInstance(),
+              ),
+            ],
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+              padding: const EdgeInsets.only(right: 4, left: 6),
+              constraints: const BoxConstraints(),
+              tooltip: 'إغلاق',
+              onPressed: () {
+                setState(() {
+                  _isFloatingSearchOpen = false;
+                  _searchFocusNode.unfocus();
+                });
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

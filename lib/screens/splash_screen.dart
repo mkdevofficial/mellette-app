@@ -125,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
                       // App Name
                       const Text(
-                        'الحقيبة القضائية الموريتانية',
+                        'نصوص قضائية',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,

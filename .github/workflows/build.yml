@@ -28,7 +28,7 @@ jobs:
 
       - run: flutter pub get
 
-      - run: flutter build apk --release --split-per-abi
+      - run: flutter build apk --release --split-per-abi --split-debug-info=build/app/outputs/symbols
 
       - uses: actions/upload-artifact@v4
         with:

@@ -14,7 +14,7 @@ class MalletteApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'الحقيبة القضائية الموريتانية',
+      title: 'نصوص قضائية',
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar', 'MR'),
       supportedLocales: const [
