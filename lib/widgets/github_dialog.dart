@@ -103,13 +103,13 @@ void showGitHubReposDialog(BuildContext context) {
     builder: (BuildContext dialogContext) {
       return Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
         ),
         backgroundColor: Colors.white,
-        elevation: 8,
+        elevation: 6,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 480),
-          padding: const EdgeInsets.all(22),
+          constraints: const BoxConstraints(maxWidth: 390),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -118,16 +118,16 @@ void showGitHubReposDialog(BuildContext context) {
               Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: const Color(0xFF0F172A),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(9),
                     ),
-                    padding: const EdgeInsets.all(10),
-                    child: const GitHubIcon(size: 24, color: Colors.white),
+                    padding: const EdgeInsets.all(8),
+                    child: const GitHubIcon(size: 18, color: Colors.white),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 10),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,7 +135,7 @@ void showGitHubReposDialog(BuildContext context) {
                         Text(
                           'مستودعات المشروع على GitHub',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF0F172A),
                           ),
@@ -144,7 +144,7 @@ void showGitHubReposDialog(BuildContext context) {
                         Text(
                           'كود المصدر وتفاصيل المشروع',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 10,
                             color: Color(0xFF64748B),
                           ),
                         ),
@@ -152,22 +152,24 @@ void showGitHubReposDialog(BuildContext context) {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
+                    icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 18),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
                     onPressed: () => Navigator.of(dialogContext).pop(),
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
 
               const Text(
-                'اختر المشروع الذي ترغب في تصفح مستودعه على GitHub:',
+                'اختر المشروع الذي ترغب في تصفح مستودعه:',
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 11,
                   color: Color(0xFF334155),
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
 
               // Option 1: Mallette (Next.js)
               _buildRepoOption(
@@ -175,12 +177,12 @@ void showGitHubReposDialog(BuildContext context) {
                 title: 'Mallette (Next.js)',
                 badge: 'موقع ويب',
                 badgeColor: const Color(0xFF0284C7),
-                description: 'موقع الويب لنفس فكرة التطبيق مبني بـ Next.js و PDF.js',
+                description: 'موقع الويب لنفس الفكرة مبني بـ Next.js و PDF.js',
                 url: 'https://github.com/mkdevofficial/Mallette',
                 icon: Icons.language,
               ),
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
               // Option 2: mallette-app (Flutter)
               _buildRepoOption(
@@ -188,32 +190,32 @@ void showGitHubReposDialog(BuildContext context) {
                 title: 'mallette-app (Flutter)',
                 badge: 'تطبيق هاتف وويب',
                 badgeColor: const Color(0xFF059669),
-                description: 'هذا التطبيق الذي نعمل عليه، مبني بالكامل بـ Flutter',
+                description: 'هذا التطبيق الذي نعمل عليه مبني بالكامل بـ Flutter',
                 url: 'https://github.com/mkdevofficial/mellette-app',
                 icon: Icons.phone_android,
               ),
 
-              const SizedBox(height: 20),
-              const Divider(height: 1, color: Color(0xFFE2E8F0)),
               const SizedBox(height: 14),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 10),
 
               // Author attribution
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.verified, color: Color(0xFF059669), size: 16),
-                    SizedBox(width: 8),
+                    Icon(Icons.verified, color: Color(0xFF059669), size: 13),
+                    SizedBox(width: 6),
                     Text(
                       'مصنوع بواسطة mokhtar eby',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1E293B),
                       ),
@@ -244,26 +246,26 @@ Widget _buildRepoOption({
       onTap: () {
         openUrl(context, url);
       },
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(color: const Color(0xFFE2E8F0)),
         ),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 color: badgeColor.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: badgeColor, size: 22),
+              child: Icon(icon, color: badgeColor, size: 17),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,22 +275,22 @@ Widget _buildRepoOption({
                       Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                         decoration: BoxDecoration(
                           color: badgeColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           badge,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 9,
                             color: badgeColor,
                             fontWeight: FontWeight.bold,
                           ),
@@ -296,22 +298,24 @@ Widget _buildRepoOption({
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     description,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       color: Color(0xFF64748B),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             const Icon(
               Icons.open_in_new,
               color: Color(0xFF94A3B8),
-              size: 18,
+              size: 15,
             ),
           ],
         ),

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/document.dart';
 import '../services/search_service.dart';
-import '../services/download_helper.dart';
+import '../widgets/download_progress_dialog.dart';
 import '../widgets/github_dialog.dart';
 import 'pdf_viewer_screen.dart';
 
@@ -80,39 +79,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _downloadDoc(DocumentModel doc) async {
-    try {
-      final byteData = await rootBundle.load(doc.assetPath);
-      final bytes = byteData.buffer.asUint8List();
-      final fileName = doc.fileName.isNotEmpty ? doc.fileName : '${doc.category}_${doc.id}.pdf';
-
-      await downloadPdfFile(bytes, fileName);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.amber),
-                const SizedBox(width: 8),
-                Expanded(child: Text('تم تنزيل ملف الـ PDF: $fileName')),
-              ],
-            ),
-            backgroundColor: const Color(0xFF065F46),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('تعذر تنزيل الملف: $e'),
-            backgroundColor: Colors.red.shade800,
-          ),
-        );
-      }
-    }
+  void _downloadDoc(DocumentModel doc) {
+    final fileName = doc.fileName.isNotEmpty ? doc.fileName : '${doc.category}_${doc.id}.pdf';
+    DownloadProgressDialog.show(
+      context,
+      assetPath: doc.assetPath,
+      fileName: fileName,
+      title: doc.titleAR,
+    );
   }
 
   void _openPdfViewer(SearchResultItem item) async {
@@ -210,37 +184,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF34D399).withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF34D399),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${_searchService.documents.length} وثيقة',
-                      style: const TextStyle(color: Color(0xFFA7F3D0), fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
           IconButton(
             tooltip: 'مستودع المشروع على GitHub',
             icon: Container(
@@ -254,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             onPressed: () => showGitHubReposDialog(context),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
